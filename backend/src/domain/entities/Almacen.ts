@@ -9,7 +9,7 @@ export class Almacen {
     this.width = width;
     this.height = height;
   }
-
+//Aca ya aplique desde el principio la programacion defensiva donde limito segun las variables de width y height la creacion de celdas.
   public agregarCelda(celda: Celda): void {
     if (celda.x < 0 || celda.x >= this.width || celda.y < 0 || celda.y >= this.height) {
       throw new Error(`Celda (${celda.x},${celda.y}) fuera de los límites del almacén`);
@@ -28,11 +28,11 @@ export class Almacen {
   public getEstanteriasVacias(): Estanteria[] {
     return this.getEstanterias().filter(e => e.estaVacia());
   }
-
+//TODAS las celdas que son tipo: muelle
   public getMuelles(): Muelle[] {
     return [...this.celdas.values()].filter((c): c is Muelle => c instanceof Muelle);
   }
-
+//Los muelles vienen como strings
   public getMuelle(id: string): Muelle | undefined {
     return this.getMuelles().find(m => m.id === id);
   }

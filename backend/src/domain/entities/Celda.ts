@@ -2,6 +2,7 @@ import { Paquete } from './Paquete';
 
 export type TipoCelda = 'PASILLO' | 'ESTANTERIA' | 'MUELLE' | 'BASE_CARGA';
 
+//Hacemos una clase abstracta porque va a ser usada por varias clases concretas para cada tipo de celda distinto
 export abstract class Celda {
   public ocupada: boolean = false;
   public reservada: any | null = null;
@@ -9,10 +10,10 @@ export abstract class Celda {
   constructor(
     public readonly x: number,
     public readonly y: number,
-    public readonly tipo: TipoCelda
+    public readonly tipo: TipoCelda //Se asegura que no haya error de tipo
   ) {}
 }
-
+//No marcamos estados de ocupada o reservada porque ya estan definidos en la clase abstracta
 export class Pasillo extends Celda {
   constructor(x: number, y: number) {
     super(x, y, 'PASILLO');
@@ -29,8 +30,11 @@ export class Estanteria extends Celda {
   public estaVacia(): boolean {
     return this.paquetes.length === 0;
   }
-
+//Le agrego una validacion para controlar que solo puede haber un paquete en la estanteria. Antes confiaba en el ControladorAlmacen. Esta "redundancia" se llama programacion defensiva
   public depositar(paquete: Paquete): void {
+    if (!this.estaVacia()) {
+      throw new Error(`Estanteria (${this.x},${this.y}) ya tiene un paquete`);
+    }
     this.paquetes.push(paquete);
     paquete.posicion = this;
   }
