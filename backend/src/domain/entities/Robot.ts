@@ -52,7 +52,9 @@ export class Robot {
 
     if (this.bateria <= 0) {
       this.bateria = 0;
-      this.estado = new EstadoInmovilizado();
+      // Si cayó en una base de carga, recarga en vez de inmovilizarse
+      const { EstadoRecargando } = require('../states/EstadoRecargando');
+      this.estado = this.posicion instanceof BaseCarga ? new EstadoRecargando() : new EstadoInmovilizado();
     }
   }
 
@@ -78,19 +80,24 @@ export class Robot {
 
     if (this.tarea.tipo === 'BUSCAR') {
       if (this.posicion instanceof Muelle) {
+        // RECEPCION: el robot retira el paquete del camión → el camión ya no tiene nada que dar
         const orden = this.tarea.orden;
         this.carga = orden.tipoPaquete === 'COMESTIBLE'
           ? new PaqueteComestible(orden.paqueteId, orden.peso, orden.vencimiento!)
           : new PaqueteGeneral(orden.paqueteId, orden.peso);
+        orden.completar();
       } else if (this.posicion instanceof Estanteria) {
+        // DESPACHO: el robot retira el paquete de la estantería para llevarlo al camión
         this.carga = this.posicion.retirar();
       }
     } else if (this.tarea.tipo === 'DEPOSITAR') {
       if (this.posicion instanceof Estanteria && this.carga) {
+        // RECEPCION: deposita en estantería (orden ya completada al retirar del muelle)
         this.posicion.depositar(this.carga);
         this.tarea.orden.paquete = this.carga;
         this.carga = null;
       } else if (this.posicion instanceof Muelle && this.carga) {
+        // DESPACHO: entrega al camión → el camión ya tiene todo lo que necesita
         this.carga = null;
         this.tarea.orden.completar();
       }

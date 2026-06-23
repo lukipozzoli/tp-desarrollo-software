@@ -11,8 +11,8 @@ import { CamionDTO, MapaConfigDTO, RobotConfigDTO } from './dtos';
  * configuración (mock del mundo físico) y notificar eventos.
  */
 export class SimuladorEntorno implements TickSubject {
-  private tickActual: number = 0;
-  private observers: TickObserver[] = [];
+  private tickActual: number = 0; //iniciamos en el tick 0
+  private observers: TickObserver[] = []; //Mete en un array a todos los que instaciaron TickOberver
   private simActual: string = 'sim1';
   private camionesPendientes: CamionDTO[] = [];
   
@@ -24,7 +24,7 @@ export class SimuladorEntorno implements TickSubject {
     this.controlador = new ControladorAlmacen();
   }
 
-  public init(simName: string = 'sim1'): void {
+  public init(simName: string = 'sim1'): void { //Valor por default. Si no cambiamos en index.ts va a tomar sim1
     this.simActual = simName;
     const dataPath = path.join(this.dataBasePath, simName);
 

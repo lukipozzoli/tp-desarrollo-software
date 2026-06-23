@@ -16,6 +16,10 @@ export class ControladorAlmacen {
   private contadorTareas: number = 0;
 
   public inicializar(mapaConfig: MapaConfigDTO, robotsConfig: RobotConfigDTO[]): void {
+    this.robots = [];
+    this.camiones = [];
+    this.ordenesLibres = [];
+    this.contadorTareas = 0;
     this.almacen = new Almacen(mapaConfig.dimensiones.width, mapaConfig.dimensiones.height);
 
     // Poblar todas las celdas como pasillo primero
@@ -91,7 +95,7 @@ export class ControladorAlmacen {
     // 3b. Crear segunda tarea para robots que completaron la primera mitad
     for (const robot of this.robots) {
       if (robot.tarea || !robot.ultimaTarea) continue;
-      if (robot.ultimaTarea.tipo === 'BUSCAR' && !robot.ultimaTarea.orden.estaCompletada()) {
+      if (robot.ultimaTarea.tipo === 'BUSCAR' && robot.carga) {
         console.log(`\n[ROBOT ${robot.id}] Completó BUSCAR → creando tarea DEPOSITAR para orden ${robot.ultimaTarea.orden.id}`);
         this.crearTareaDepositar(robot, robot.ultimaTarea.orden);
         robot.ultimaTarea = null;
@@ -156,16 +160,15 @@ export class ControladorAlmacen {
     const idTarea = `T${++this.contadorTareas}`;
 
     if (camion.tipo === 'RECEPCION') {
-      const estanteria = this.almacen.getEstanteriasVacias().find(e => !e.reservada);
-      if (!estanteria) return;
-      estanteria.reservada = robot;
-      tarea = new Tarea(idTarea, 'BUSCAR', orden, camion.muelle, estanteria);
+      // Para RECEPCION el robot va al muelle a buscar el paquete. La estantería se reserva recién en DEPOSITAR.
+      tarea = new Tarea(idTarea, 'BUSCAR', orden, camion.muelle, camion.muelle);
     } else {
+      // Para DESPACHO el robot va a la estantería a buscar el paquete.
       const estanteria = this.almacen.getEstanterias()
         .find(e => e.paquetes.some(p => p.id === orden.paqueteId));
       if (!estanteria) return;
       estanteria.reservada = robot;
-      tarea = new Tarea(idTarea, 'BUSCAR', orden, estanteria, camion.muelle);
+      tarea = new Tarea(idTarea, 'BUSCAR', orden, estanteria, estanteria);
     }
 
     robot.tarea = tarea;
@@ -188,6 +191,8 @@ export class ControladorAlmacen {
       camion.muelle.reservada = robot;
       robot.tarea = new Tarea(idTarea, 'DEPOSITAR', orden, robot.posicion, camion.muelle);
     }
+    robot.estado = new EstadoOperando();
+    console.log(`[DEPOSITAR] Robot ${robot.id} → tarea ${robot.tarea.id} destino=(${robot.tarea.destino.x},${robot.tarea.destino.y})`);
   }
 
   public obtenerEstado(): object {
@@ -205,7 +210,7 @@ export class ControladorAlmacen {
       estanterias: this.almacen.getEstanterias().map(e => ({
         x: e.x,
         y: e.y,
-        paquetes: e.paquetes,
+        paquetes: e.paquetes.map(p => ({ id: p.id, peso: p.peso, categoria: p.categoria })),
       })),
       basesCarga: this.almacen.getBasesCarga().map(b => ({ x: b.x, y: b.y })),
     };

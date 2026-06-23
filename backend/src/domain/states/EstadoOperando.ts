@@ -3,6 +3,7 @@ import { Robot } from '../entities/Robot';
 import { Almacen } from '../entities/Almacen';
 import { EstadoBateriaBaja } from './EstadoBateriaBaja';
 import { EstadoInmovilizado } from './EstadoInmovilizado';
+import { EstadoInactivo } from './EstadoInactivo';
 import { Estanteria, Muelle } from '../entities/Celda';
 
 export class EstadoOperando implements EstadoRobot {
@@ -26,6 +27,9 @@ export class EstadoOperando implements EstadoRobot {
 
     if (robot.posicion === destino) {
       robot.realizarOperacion();
+      if (!robot.tarea) {
+        robot.estado = new EstadoInactivo();
+      }
     } else {
       robot.moverHacia(destino, almacen);
     }
