@@ -3,6 +3,7 @@ import path from 'path';
 import { parse } from 'csv-parse/sync';
 
 /** Forma de cada fila del CSV del almacén una vez parseada */
+/* Con esto vamos a hacer un objeto por cada fila del */
 interface AlmacenRow {
   tipo: string;
   x: string;
