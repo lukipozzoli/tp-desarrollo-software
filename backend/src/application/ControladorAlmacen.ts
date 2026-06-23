@@ -63,26 +63,36 @@ export class ControladorAlmacen {
   }
 
   public procesarPaso(): void {
+    console.log('\n========== INICIO TICK ==========');
+    for (const robot of this.robots) {
+      console.log(`[ROBOT ${robot.id}] pos=(${robot.posicion.x},${robot.posicion.y}) estado=${robot.estado.nombre} bateria=${robot.bateria} carga=${robot.carga?.id ?? 'null'} tarea=${robot.tarea?.id ?? 'null'}`);
+    }
+
     // 1. Liberar órdenes de camiones ACOPLADOS → OPERATIVO
     for (const camion of this.camiones) {
       if (camion.estado === 'ACOPLADO') {
         camion.estado = 'OPERATIVO';
         this.ordenesLibres.push(...camion.ordenesActivas());
+        console.log(`\n[CAMION ${camion.id}] ACOPLADO → OPERATIVO, ordenes liberadas: ${camion.ordenesActivas().map(o => o.id).join(', ')}`);
       }
     }
 
     // 2. Asignar órdenes a robots INACTIVOS
+    console.log('\n--- Asignando órdenes ---');
     this.asignarOrdenes();
 
     // 3. Cada robot ejecuta su acción
+    console.log('\n--- Ejecutando acciones ---');
     for (const robot of this.robots) {
       robot.ejecutarAccion(this.almacen);
+      console.log(`[ROBOT ${robot.id}] → pos=(${robot.posicion.x},${robot.posicion.y}) estado=${robot.estado.nombre} bateria=${robot.bateria} carga=${robot.carga?.id ?? 'null'}`);
     }
 
     // 3b. Crear segunda tarea para robots que completaron la primera mitad
     for (const robot of this.robots) {
       if (robot.tarea || !robot.ultimaTarea) continue;
       if (robot.ultimaTarea.tipo === 'BUSCAR' && !robot.ultimaTarea.orden.estaCompletada()) {
+        console.log(`\n[ROBOT ${robot.id}] Completó BUSCAR → creando tarea DEPOSITAR para orden ${robot.ultimaTarea.orden.id}`);
         this.crearTareaDepositar(robot, robot.ultimaTarea.orden);
         robot.ultimaTarea = null;
       }
@@ -95,12 +105,16 @@ export class ControladorAlmacen {
         const hayRobotEncima = this.robots.some(r => r.posicion === camion.muelle);
         if (hayRobotEncima) {
           camion.estado = 'LISTO';
+          console.log(`\n[CAMION ${camion.id}] Órdenes completas pero hay robot encima → LISTO`);
         } else {
           camion.estado = 'RETIRADO';
           camion.muelle.acoplado = false;
+          console.log(`\n[CAMION ${camion.id}] Retirado del muelle`);
         }
       }
     }
+
+    console.log('========== FIN TICK ==========\n');
   }
 
   private asignarOrdenes(): void {
@@ -130,6 +144,7 @@ export class ControladorAlmacen {
 
       this.asignarOrdenARobot(robot, orden);
       this.ordenesLibres = this.ordenesLibres.filter(o => o !== orden);
+      ordenesOrdenadas.splice(ordenesOrdenadas.indexOf(orden), 1);
     }
   }
 
@@ -155,6 +170,7 @@ export class ControladorAlmacen {
 
     robot.tarea = tarea;
     robot.estado = new EstadoOperando();
+    console.log(`[ASIGNACION] Robot ${robot.id} → orden ${orden.id} (${orden.tipoPaquete}) | tarea=${tarea.id} tipo=${tarea.tipo} | origen=(${tarea.origen.x},${tarea.origen.y}) destino=(${tarea.destino.x},${tarea.destino.y})`);
   }
 
   private crearTareaDepositar(robot: Robot, orden: Orden): void {
