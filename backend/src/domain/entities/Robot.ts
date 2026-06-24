@@ -109,11 +109,20 @@ export class Robot {
   }
 //Distancia "manhattan" a la base mas cercana x costo de movimiento
   public necesitaRecargar(almacen: Almacen): boolean {
-    const base = this.baseMasCercana(almacen);
-    if (!base) return false;
-    const distancia = distanciaManhattan(this.posicion.x, this.posicion.y, base.x, base.y);
-    const costo = this.carga ? 2 : 1;
-    return this.bateria <= distancia * costo;
+    const bases = almacen.getBasesCarga().filter(b => !b.ocupada);
+    if (bases.length === 0) return false;
+    const distancia = Math.min(...bases.map(b =>
+      distanciaManhattan(this.posicion.x, this.posicion.y, b.x, b.y)
+    ));
+    if (this.carga) {
+      // Lleva carga: agrega 1 paso de margen porque moverse aleja de la base
+      return this.bateria <= distancia * 2 + 2;
+    }
+    if (this.tarea?.tipo === 'BUSCAR') {
+      // Sin carga pero va a buscar: anticipa el costo doble tras el pickup
+      return this.bateria <= distancia * 2;
+    }
+    return this.bateria <= distancia;
   }
 
   public baseMasCercana(almacen: Almacen): BaseCarga | null {

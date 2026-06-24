@@ -7,6 +7,7 @@ import { Tarea } from '../domain/entities/Tarea';
 import { Estanteria, Muelle, BaseCarga, Pasillo } from '../domain/entities/Celda';
 import { EstadoInactivo } from '../domain/states/EstadoInactivo';
 import { EstadoOperando } from '../domain/states/EstadoOperando';
+import { EstadoInmovilizado } from '../domain/states/EstadoInmovilizado';
 
 export class ControladorAlmacen {
   private almacen!: Almacen;
@@ -102,6 +103,16 @@ export class ControladorAlmacen {
       }
     }
 
+    // 3c. Devolver órdenes de robots que quedaron INMOVILIZADO con tarea pendiente
+    for (const robot of this.robots) {
+      if (!(robot.estado instanceof EstadoInmovilizado)) continue;
+      if (!robot.tarea) continue;
+      console.log(`[INMOVILIZADO] Robot ${robot.id} devuelve orden ${robot.tarea.orden.id} a la lista`);
+      robot.tarea.destino.reservada = null;
+      this.ordenesLibres.push(robot.tarea.orden);
+      robot.tarea = null;
+    }
+
     // 4. Retirar camiones con órdenes completadas
     for (const camion of this.camiones) {
       if (camion.estado === 'RETIRADO') continue;
@@ -143,12 +154,16 @@ export class ControladorAlmacen {
       const celda = robot.posicion;
       if (celda instanceof Muelle || celda instanceof Estanteria) continue;
 
-      const orden = ordenesOrdenadas.find(o => !o.estaCompletada());
-      if (!orden) break;
+      for (const orden of ordenesOrdenadas) {
+        if (orden.estaCompletada()) continue;
 
-      this.asignarOrdenARobot(robot, orden);
-      this.ordenesLibres = this.ordenesLibres.filter(o => o !== orden);
-      ordenesOrdenadas.splice(ordenesOrdenadas.indexOf(orden), 1);
+        this.asignarOrdenARobot(robot, orden);
+        if (!robot.tarea) continue; // esta orden no se pudo asignar, probar la siguiente
+
+        this.ordenesLibres = this.ordenesLibres.filter(o => o !== orden);
+        ordenesOrdenadas.splice(ordenesOrdenadas.indexOf(orden), 1);
+        break; // robot asignado, pasar al siguiente robot
+      }
     }
   }
 
